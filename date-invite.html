@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>윤진에게 온 편지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet">
+<style>
+  /* 한 장의 분홍 편지지 위에서 화면이 차례로 넘어가는 구성 (의도적으로 라이트 테마 하나만 사용) */
+  :root {
+    color-scheme: light;
+    --pink: #ff6f91;
+    --pink-dark: #e84a74;
+    --pink-soft: #ffe3ec;
+    --line: #f6d3de;
+    --paper: #ffffff;
+    --text: #5a3d48;
+    --muted: #a88a95;
+    --gold: #ffc94d;
+    --gold-soft: #fff3c4;
+    --display: 'Jua', 'Gowun Dodum', -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    --body: 'Gowun Dodum', -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { height: 100%; overflow-x: hidden; }
+  body { min-height: 100%; overflow-x: hidden; }
+  body {
+    font-family: var(--body);
+    color: var(--text);
+    background: linear-gradient(160deg, #ffd6e2 0%, #ffeef2 45%, #fff6e9 100%);
+    background-color: #ffeef2;
+    display: flex; flex-direction: column; align-items: center;
+    padding-block: 24px; padding-inline: 16px;
+  }
+  h1, h2, .btn { font-family: var(--display); font-weight: 400; text-wrap: balance; }
+
+  /* 배경 하트 */
+  .bg-hearts { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  .bg-hearts span { position: absolute; bottom: -40px; opacity: .55; animation: floatUp linear infinite; }
+  @keyframes floatUp {
+    from { transform: translateY(0) rotate(0deg); }
+    to   { transform: translateY(-115vh) rotate(25deg); }
+  }
+
+  /* 화면 */
+  .screen {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 400px; margin-block: auto;
+    display: none; flex-direction: column; align-items: center; text-align: center;
+    animation: pop .5s cubic-bezier(.2,1.4,.4,1);
+  }
+  .screen.active { display: flex; }
+  @keyframes pop { from { opacity: 0; transform: scale(.85) translateY(20px); } to { opacity: 1; transform: none; } }
+
+  .card {
+    width: 100%;
+    background: rgba(255,255,255,.9);
+    backdrop-filter: blur(6px);
+    border-radius: 28px;
+    padding: 30px 22px;
+    box-shadow: 0 18px 40px rgba(232, 74, 116, .18);
+  }
+
+  /* 편지봉투 */
+  .envelope {
+    position: relative; width: 220px; height: 150px; cursor: pointer;
+    animation: wiggle 2.2s ease-in-out infinite;
+    margin: 10px 0 28px;
+  }
+  @keyframes wiggle { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg) scale(1.03); } }
+  .envelope .body { position: absolute; inset: 0; background: #ffb3c6; border-radius: 12px; box-shadow: 0 12px 28px rgba(232,74,116,.3); }
+  .envelope .flap {
+    position: absolute; top: 0; left: 0; width: 0; height: 0;
+    border-left: 110px solid transparent; border-right: 110px solid transparent;
+    border-top: 85px solid #ff8fab;
+    transform-origin: top; transition: transform .5s; z-index: 2;
+  }
+  .envelope.open .flap { transform: rotateX(180deg); }
+  .envelope .seal { position: absolute; left: 50%; top: 62px; transform: translate(-50%, -50%); font-size: 38px; z-index: 3; transition: opacity .3s; }
+  .envelope.open .seal { opacity: 0; }
+  .hint { color: var(--muted); font-size: 15px; animation: blink 1.6s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+
+  .emoji-big { font-size: 60px; line-height: 1; margin-bottom: 14px; }
+  h1 { font-size: 30px; color: var(--pink-dark); margin-bottom: 10px; line-height: 1.35; }
+  h2 { font-size: 23px; color: var(--pink-dark); margin-bottom: 6px; }
+  .sub { font-size: 14px; color: var(--muted); margin-bottom: 18px; }
+  p.lead { font-size: 16px; line-height: 1.8; white-space: pre-line; }
+  .sign { margin-top: 18px; font-family: var(--display); color: var(--pink-dark); font-size: 17px; text-align: right; }
+
+  /* 버튼 */
+  .btn {
+    border: none; cursor: pointer;
+    font-size: 20px; padding: 14px 30px; border-radius: 999px;
+    transition: transform .2s, box-shadow .2s, background .2s, opacity .2s;
+    user-select: none; touch-action: manipulation;
+  }
+  .btn:active { transform: scale(.95); }
+  .btn:focus-visible, .chip:focus-visible, .link-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .btn-yes { background: linear-gradient(135deg, var(--pink), var(--pink-dark)); color: #fff; box-shadow: 0 8px 20px rgba(232,74,116,.35); }
+  .btn-no { background: var(--paper); color: var(--muted); border: 2px solid #f1d4dd; }
+  .btn-row { display: flex; gap: 14px; justify-content: center; align-items: center; margin-top: 28px; min-height: 70px; flex-wrap: wrap; }
+  .btn-full { width: 100%; margin-top: 22px; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+  .link-btn { background: none; border: none; color: var(--muted); font-family: var(--body); font-size: 13px; text-decoration: underline; margin-top: 12px; cursor: pointer; }
+
+  .no-msg { min-height: 24px; margin-top: 14px; color: var(--pink-dark); font-size: 15px; }
+
+  /* 설렘 게이지 */
+  .beat { animation: beat .8s ease-in-out infinite; }
+  @keyframes beat { 0%,100% { transform: scale(1); } 30% { transform: scale(1.18); } 60% { transform: scale(.95); } }
+  .gauge { width: 100%; height: 18px; background: var(--pink-soft); border-radius: 999px; overflow: hidden; margin-top: 18px; }
+  .gauge-fill { height: 100%; width: 0; background: linear-gradient(90deg, #ffb3c6, var(--pink), var(--pink-dark)); border-radius: 999px; transition: width .08s linear; }
+  .gauge-pct { font-family: var(--display); font-size: 28px; color: var(--pink-dark); margin-top: 12px; font-variant-numeric: tabular-nums; }
+  .gauge-msg { font-size: 15px; min-height: 24px; margin-top: 4px; }
+
+  /* 입력 */
+  .field { width: 100%; text-align: left; margin-bottom: 18px; }
+  .field:last-of-type { margin-bottom: 0; }
+  .field > label, .field-label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+  .text-input {
+    width: 100%; padding: 13px 16px; font-size: 16px; font-family: inherit; color: var(--text);
+    border: 2px solid var(--line); border-radius: 16px; background: var(--paper); outline: none;
+  }
+  .text-input:focus { border-color: var(--pink); }
+  textarea.text-input { resize: none; line-height: 1.6; }
+  .custom-input { margin-top: 10px; }
+
+  .chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: 100%; }
+  .chip {
+    background: var(--paper); border: 2px solid var(--line); border-radius: 18px;
+    padding: 11px 4px; cursor: pointer; font-family: inherit; color: var(--text);
+    font-size: 14px; transition: all .18s; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    min-width: 0; word-break: keep-all;
+  }
+  .chip .e { font-size: 25px; line-height: 1.2; }
+  .chip .sw { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(90,61,72,.15); margin-block: 1px; }
+  .chip.selected { background: var(--pink-soft); border-color: var(--pink); color: var(--pink-dark); transform: translateY(-2px); box-shadow: 0 6px 14px rgba(255,111,145,.25); }
+  .chip.spin { background: var(--gold-soft); border-color: var(--gold); transform: scale(1.06); }
+  .chip-random, .chip-custom { border-style: dashed; }
+
+  .step { font-size: 13px; color: var(--muted); margin-bottom: 6px; letter-spacing: 1px; }
+
+  /* 긁는 쿠폰 */
+  .scratch { position: relative; width: 100%; height: 150px; border-radius: 20px; overflow: hidden; }
+  .coupon {
+    position: absolute; inset: 0; border: 3px dashed var(--pink); border-radius: 20px; background: #fffafc;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 12px;
+  }
+  .coupon-label { font-size: 12px; color: var(--muted); letter-spacing: 1px; }
+  .coupon-text { font-family: var(--display); font-size: 22px; color: var(--pink-dark); line-height: 1.35; }
+  #scratchCanvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; border-radius: 20px; }
+
+  /* 티켓 */
+  .ticket { width: 100%; background: var(--paper); border-radius: 22px; overflow: hidden; box-shadow: 0 18px 40px rgba(232,74,116,.2); text-align: left; }
+  .ticket-head { background: linear-gradient(135deg, var(--pink), var(--pink-dark)); color: #fff; padding: 20px 22px; }
+  .ticket-head .small { font-size: 12px; opacity: .85; letter-spacing: 2px; }
+  .ticket-head .big { font-family: var(--display); font-size: 26px; margin-top: 4px; }
+  .ticket-body { padding: 6px 22px 8px; position: relative; }
+  .ticket-body::before { content: ''; position: absolute; top: -1px; left: 12px; right: 12px; border-top: 2px dashed var(--line); }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #fbe9ee; font-size: 15px; gap: 12px; }
+  .row:last-child { border-bottom: none; }
+  .row .k { color: var(--muted); flex-shrink: 0; }
+  .row .v { font-weight: bold; text-align: right; min-width: 0; word-break: keep-all; display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+  .dday { background: var(--pink-soft); color: var(--pink-dark); font-size: 12px; padding: 2px 8px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+  .dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(90,61,72,.15); display: inline-block; }
+  .ticket-foot { padding: 4px 22px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
+  .stamp {
+    flex-shrink: 0; width: 78px; height: 78px; border-radius: 50%; border: 3px solid var(--pink-dark); color: var(--pink-dark);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-family: var(--display); font-size: 15px; line-height: 1.15;
+    transform: rotate(-14deg) scale(2.4); opacity: 0;
+  }
+  .stamp.on { animation: stamp .35s ease-in forwards; }
+  @keyframes stamp { to { transform: rotate(-14deg) scale(1); opacity: .85; } }
+
+  .note-box { width: 100%; margin-top: 18px; text-align: left; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(40px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px);
+    background: rgba(90,61,72,.92); color: #fff; padding: 12px 22px; border-radius: 999px;
+    font-size: 15px; opacity: 0; transition: all .3s; z-index: 50; pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%); }
+
+  .burst { position: fixed; pointer-events: none; z-index: 40; font-size: 24px; animation: burst 1.6s ease-out forwards; }
+  @keyframes burst {
+    0% { transform: translate(0,0) scale(.4); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.2) rotate(var(--rot)); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bg-hearts, .burst { display: none; }
+    .envelope, .beat, .hint { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-hearts" id="bgHearts"></div>
+
+<!-- 편지봉투 -->
+<section class="screen active" id="s-envelope">
+  <div class="envelope" id="envelope" role="button" tabindex="0" aria-label="편지 열기">
+    <div class="body"></div>
+    <div class="flap"></div>
+    <div class="seal">💌</div>
+  </div>
+  <h1 id="envTitle"></h1>
+  <p class="hint">편지를 눌러서 열어봐 👆</p>
+</section>
+
+<!-- 편지 -->
+<section class="screen" id="s-letter">
+  <div class="card">
+    <div class="emoji-big">🌷</div>
+    <p class="lead" id="letterText"></p>
+    <p class="sign" id="letterSign"></p>
+    <button class="btn btn-yes btn-full" id="toQuestion">다음 →</button>
+  </div>
+</section>
+
+<!-- 질문 -->
+<section class="screen" id="s-question">
+  <div class="card">
+    <div class="emoji-big" id="qEmoji">🥰</div>
+    <h1>나랑 데이트<br>할래?</h1>
+    <div class="btn-row">
+      <button class="btn btn-yes" id="yesBtn">좋아 💖</button>
+      <button class="btn btn-no" id="noBtn">싫어</button>
+    </div>
+    <p class="no-msg" id="noMsg"></p>
+  </div>
+</section>
+
+<!-- 설렘 게이지 -->
+<section class="screen" id="s-loading">
+  <div class="card">
+    <div class="emoji-big beat">💓</div>
+    <h2>설렘 충전 중…</h2>
+    <div class="gauge"><div class="gauge-fill" id="gaugeFill"></div></div>
+    <p class="gauge-pct" id="gaugePct">0%</p>
+    <p class="gauge-msg" id="gaugeMsg"></p>
+  </div>
+</section>
+
+<!-- STEP 1 -->
+<section class="screen" id="s-when">
+  <div class="card">
+    <p class="step">STEP 1 / 4</p>
+    <h2>언제 만날까? 📅</h2>
+    <p class="sub">윤진이가 편한 날로 골라줘</p>
+    <div class="field">
+      <label for="dateInput">날짜</label>
+      <input type="date" id="dateInput" class="text-input">
+    </div>
+    <div class="field">
+      <span class="field-label">시간대</span>
+      <div class="chips" data-group="time"></div>
+    </div>
+    <button class="btn btn-yes btn-full" id="toFood" disabled>다음 →</button>
+  </div>
+</section>
+
+<!-- STEP 2 -->
+<section class="screen" id="s-food">
+  <div class="card">
+    <p class="step">STEP 2 / 4</p>
+    <h2>뭐 먹을까? 🍽️</h2>
+    <p class="sub">여러 개 골라도 돼. 고민되면 🎲 랜덤!</p>
+    <div class="chips" data-group="food" data-multi="true" data-random="true" data-custom="먹고 싶은 거 적어줘 (예: 마라탕)"></div>
+    <button class="btn btn-yes btn-full" id="toActivity" disabled>다음 →</button>
+  </div>
+</section>
+
+<!-- STEP 3 -->
+<section class="screen" id="s-activity">
+  <div class="card">
+    <p class="step">STEP 3 / 4</p>
+    <h2>뭐 하고 놀까? 🎈</h2>
+    <p class="sub">하고 싶은 거 다 골라줘</p>
+    <div class="chips" data-group="activity" data-multi="true" data-random="true" data-custom="하고 싶은 거 적어줘 (예: 보드게임 카페)"></div>
+    <button class="btn btn-yes btn-full" id="toDress" disabled>다음 →</button>
+  </div>
+</section>
+
+<!-- STEP 4 -->
+<section class="screen" id="s-dress">
+  <div class="card">
+    <p class="step">STEP 4 / 4</p>
+    <h2>드레스 코드 정하기 👗</h2>
+    <p class="sub">윤진이가 고른 대로 재웅이도 맞춰 입고 갈게</p>
+    <div class="field">
+      <span class="field-label">포인트 컬러</span>
+      <div class="chips" data-group="color" data-random="true"></div>
+    </div>
+    <div class="field">
+      <span class="field-label">스타일</span>
+      <div class="chips" data-group="style" data-random="true"></div>
+    </div>
+    <button class="btn btn-yes btn-full" id="toCoupon" disabled>다 골랐어! ✨</button>
+  </div>
+</section>
+
+<!-- 긁는 쿠폰 -->
+<section class="screen" id="s-coupon">
+  <div class="card">
+    <p class="step">BONUS</p>
+    <h2>깜짝 쿠폰 도착! 🎁</h2>
+    <p class="sub">손가락으로 쓱쓱 긁어봐</p>
+    <div class="scratch">
+      <div class="coupon">
+        <div class="coupon-label" id="couponLabel"></div>
+        <div class="coupon-text" id="couponText"></div>
+      </div>
+      <canvas id="scratchCanvas" aria-label="긁는 쿠폰"></canvas>
+    </div>
+    <button class="link-btn" id="skipScratch">긁기 귀찮으면 여기 눌러줘</button>
+    <button class="btn btn-yes btn-full" id="toTicket" disabled>데이트 티켓 받기 🎫</button>
+  </div>
+</section>
+
+<!-- 티켓 -->
+<section class="screen" id="s-ticket">
+  <div class="ticket">
+    <div class="ticket-head">
+      <div class="small">DATE TICKET · 1 ADMIT</div>
+      <div class="big" id="tTitle"></div>
+    </div>
+    <div class="ticket-body">
+      <div class="row"><span class="k">📅 날짜</span><span class="v" id="tDate"></span></div>
+      <div class="row"><span class="k">⏰ 시간</span><span class="v" id="tTime"></span></div>
+      <div class="row"><span class="k">🍽️ 먹을 것</span><span class="v" id="tFood"></span></div>
+      <div class="row"><span class="k">🎈 할 것</span><span class="v" id="tAct"></span></div>
+      <div class="row"><span class="k">👗 드레스 코드</span><span class="v" id="tDress"></span></div>
+      <div class="row"><span class="k">🎁 쿠폰</span><span class="v" id="tCoupon"></span></div>
+    </div>
+    <div class="ticket-foot">
+      <span>이 티켓은 환불이 불가능합니다 😉</span>
+      <div class="stamp" id="stamp">수락<br>완료 ♥</div>
+    </div>
+  </div>
+  <div class="note-box">
+    <label class="field-label" for="noteInput" id="noteLabel"></label>
+    <textarea id="noteInput" class="text-input" rows="2" placeholder="안 써도 괜찮아!"></textarea>
+  </div>
+  <button class="btn btn-yes btn-full" id="shareBtn">답장 보내기 💌</button>
+  <p class="hint" style="margin-top:14px; animation:none;">버튼을 누르고 카톡에 붙여넣거나, 이 화면을 캡처해서 보내줘!</p>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ============================================
+     ✏️ 여기만 바꿔서 쓰세요!
+     ============================================ */
+  const CONFIG = {
+    to: "최윤진",                 // 여자친구 이름
+    toNick: "윤진이",             // "윤진이가", "윤진이한테"처럼 부를 때
+    from: "재웅",                 // 내 이름
+    fromNick: "재웅이",           // "재웅이한테", "재웅이에게"처럼 부를 때
+    sign: "너의 남자친구 재웅",    // 편지 맨 아래 서명
+    letter:
+`안녕 윤진아! 🌸
+
+요즘 너랑 있으면 하루가 금방 지나가.
+그래서 이번엔 내가 제대로
+데이트 신청을 해보려고 해.
+
+조금 떨리지만… 대답해 줄래? 😳`,
+    coupons: [
+      "📸 인생샷 100장 찍어주기권",
+      "🍰 디저트 무제한 쿠폰",
+      "🙆 소원 1개 들어주기권",
+      "👜 하루 종일 가방 들어주기권",
+      "💆 어깨 안마 10분권",
+      "🍦 아이스크림 사주기권",
+    ],
+  };
+
+  const OPTIONS = {
+    time: [["☀️", "점심"], ["🌙", "저녁"], ["💞", "하루 종일"]],
+    food: [["🍝", "파스타"], ["🥩", "고기"], ["🍣", "초밥"], ["🍜", "라멘"], ["🌶️", "떡볶이"], ["🍗", "치킨"], ["🍰", "디저트 카페"]],
+    activity: [["🎬", "영화"], ["🌳", "산책"], ["🖼️", "전시회"], ["🎡", "놀이공원"], ["🎤", "노래방"], ["🔐", "방탈출"], ["🛋️", "집데이트"]],
+    color: [["#f7a8c0", "러블리 핑크"], ["#ffffff", "클린 화이트"], ["#2d2a2c", "시크 블랙"], ["#d8c3a5", "웜 베이지"],
+            ["#5b7fb0", "데님 블루"], ["#c8323c", "체리 레드"], ["#7d8653", "올리브"], ["#b9a6e0", "라벤더"]],
+    style: [["👟", "꾸안꾸"], ["🎀", "러블리"], ["🖤", "시크"], ["🧢", "스포티"], ["👫", "커플룩"]],
+  };
+  /* ============================================ */
+
+  const $ = (id) => document.getElementById(id);
+
+  $("envTitle").textContent = `${CONFIG.to}에게 편지가 도착했어요`;
+  $("letterText").textContent = CONFIG.letter;
+  $("letterSign").textContent = `— ${CONFIG.sign}`;
+  $("couponLabel").textContent = `${CONFIG.from} 발행 · 유효기간 평생`;
+  $("noteLabel").textContent = `${CONFIG.fromNick}한테 한마디 (선택)`;
+
+  // 배경 하트
+  const bg = $("bgHearts");
+  const icons = ["💗", "💕", "💖", "🌸", "✨", "💓"];
+  for (let i = 0; i < 18; i++) {
+    const s = document.createElement("span");
+    s.textContent = icons[i % icons.length];
+    s.style.left = Math.random() * 100 + "vw";
+    s.style.fontSize = 14 + Math.random() * 20 + "px";
+    s.style.animationDuration = 9 + Math.random() * 10 + "s";
+    s.style.animationDelay = -Math.random() * 15 + "s";
+    bg.appendChild(s);
+  }
+
+  function go(id) {
+    document.querySelectorAll(".screen").forEach((el) => el.classList.remove("active"));
+    $(id).classList.add("active");
+    window.scrollTo(0, 0);
+    if (id === "s-loading") runGauge();
+    if (id === "s-coupon") requestAnimationFrame(initScratch);
+  }
+
+  function burst(x, y, n = 28) {
+    const set = ["💖", "💗", "💕", "✨", "🌸", "💘"];
+    for (let i = 0; i < n; i++) {
+      const h = document.createElement("div");
+      h.className = "burst";
+      h.textContent = set[i % set.length];
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 90 + Math.random() * 180;
+      h.style.left = x + "px";
+      h.style.top = y + "px";
+      h.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+      h.style.setProperty("--dy", Math.sin(ang) * dist - 60 + "px");
+      h.style.setProperty("--rot", (Math.random() * 90 - 45) + "deg");
+      document.body.appendChild(h);
+      setTimeout(() => h.remove(), 1700);
+    }
+  }
+  const burstAt = (el, n) => { const r = el.getBoundingClientRect(); burst(r.left + r.width / 2, r.top + r.height / 2, n); };
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2000);
+  }
+
+  // 편지 열기
+  function openEnvelope() {
+    $("envelope").classList.add("open");
+    burstAt($("envelope"), 14);
+    setTimeout(() => go("s-letter"), 600);
+  }
+  $("envelope").addEventListener("click", openEnvelope);
+  $("envelope").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") openEnvelope(); });
+  $("toQuestion").addEventListener("click", () => go("s-question"));
+
+  // 도망가는 "싫어" 버튼
+  const noBtn = $("noBtn"), yesBtn = $("yesBtn");
+  const noTexts = ["진짜?", "다시 생각해봐 🥺", "한 번만 더…", `${CONFIG.toNick.replace(/이$/, "")}아 제발 🙏`, "안 돼애 😭", "버튼이 도망간다~", "좋다고 해줘 💗"];
+  const emojis = ["🥺", "😢", "😭", "🙏", "💔", "😿", "🥹"];
+  let noCount = 0;
+
+  function dodge(e) {
+    if (e) e.preventDefault();
+    noCount++;
+    $("noMsg").textContent = noTexts[(noCount - 1) % noTexts.length];
+    $("qEmoji").textContent = emojis[(noCount - 1) % emojis.length];
+    yesBtn.style.transform = `scale(${Math.min(1 + noCount * 0.15, 2)})`;
+
+    // 7번 넘게 거절하면 "싫어"도 "좋아"로 변신
+    if (noCount >= 7) {
+      noBtn.textContent = "좋아 💖";
+      noBtn.className = "btn btn-yes";
+      noBtn.style.cssText = "";
+      noBtn.removeEventListener("pointerenter", onHover);
+      noBtn.removeEventListener("pointerdown", dodge);
+      noBtn.addEventListener("click", sayYes);
+      return;
+    }
+
+    const r = noBtn.getBoundingClientRect();
+    const pad = 16;
+    noBtn.style.position = "fixed";
+    noBtn.style.zIndex = 30;
+    noBtn.style.left = Math.max(pad, Math.random() * (window.innerWidth - r.width - pad)) + "px";
+    noBtn.style.top = Math.max(pad, Math.random() * (window.innerHeight - r.height - pad)) + "px";
+    noBtn.style.transition = "left .25s, top .25s";
+  }
+  const onHover = (e) => { if (e.pointerType === "mouse") dodge(e); };
+  noBtn.addEventListener("pointerenter", onHover);
+  noBtn.addEventListener("pointerdown", dodge);
+
+  function sayYes(e) {
+    burstAt(e.currentTarget, 40);
+    noBtn.style.display = "none";
+    $("qEmoji").textContent = "😍";
+    $("noMsg").textContent = "야호!! 🎉";
+    setTimeout(() => go("s-loading"), 1100);
+  }
+  yesBtn.addEventListener("click", sayYes);
+
+  // 설렘 게이지
+  function runGauge() {
+    const msgs = [
+      [0, `${CONFIG.fromNick} 심장 박동 측정 중… 💓`],
+      [30, `${CONFIG.toNick} 귀여움 수치 계산 중…`],
+      [55, "⚠️ 귀여움 수치 측정 불가 (너무 높음)"],
+      [80, "데이트 코스 준비 중… 🗺️"],
+      [100, "설렘 120% 충전 완료!! 💘"],
+    ];
+    let p = 0;
+    const timer = setInterval(() => {
+      p += p < 100 ? 1 : 4;
+      const shown = Math.min(p, 120);
+      $("gaugeFill").style.width = Math.min(shown, 100) + "%";
+      $("gaugePct").textContent = shown + "%";
+      $("gaugeMsg").textContent = msgs.filter(([t]) => shown >= t).pop()[1];
+      if (shown >= 120) {
+        clearInterval(timer);
+        burstAt($("gaugePct"), 24);
+        setTimeout(() => go("s-when"), 900);
+      }
+    }, 28);
+  }
+
+  // 선택지 만들기
+  const picks = { time: [], food: [], activity: [], color: [], style: [] };
+
+  document.querySelectorAll(".chips").forEach((group) => {
+    const key = group.dataset.group;
+    const multi = group.dataset.multi === "true";
+
+    OPTIONS[key].forEach(([icon, label]) => {
+      const chip = document.createElement("button");
+      chip.className = "chip";
+      chip.dataset.v = label;
+      chip.innerHTML = key === "color"
+        ? `<span class="sw" style="background:${icon}"></span>${label}`
+        : `<span class="e">${icon}</span>${label}`;
+      if (key === "color") chip.dataset.hex = icon;
+      group.appendChild(chip);
+    });
+
+    let customInput = null;
+    if (group.dataset.random) {
+      const r = document.createElement("button");
+      r.className = "chip chip-random";
+      r.innerHTML = `<span class="e">🎲</span>랜덤`;
+      r.addEventListener("click", () => spin(group, customInput));
+      group.appendChild(r);
+    }
+    if (group.dataset.custom) {
+      const c = document.createElement("button");
+      c.className = "chip chip-custom";
+      c.innerHTML = `<span class="e">✏️</span>직접 입력`;
+      customInput = document.createElement("input");
+      customInput.className = "text-input custom-input";
+      customInput.id = `custom-${key}`;
+      customInput.placeholder = group.dataset.custom;
+      customInput.maxLength = 30;
+      customInput.hidden = true;
+      customInput.addEventListener("input", () => update(group, customInput));
+      group.after(customInput);
+      c.addEventListener("click", () => {
+        c.classList.toggle("selected");
+        customInput.hidden = !c.classList.contains("selected");
+        if (!customInput.hidden) customInput.focus();
+        update(group, customInput);
+      });
+      group.appendChild(c);
+    }
+
+    group.querySelectorAll(".chip[data-v]").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        if (group.dataset.spinning) return;
+        if (multi) {
+          chip.classList.toggle("selected");
+        } else {
+          group.querySelectorAll(".chip").forEach((c) => c.classList.remove("selected"));
+          chip.classList.add("selected");
+        }
+        update(group, customInput);
+      });
+    });
+  });
+
+  function update(group, customInput) {
+    const key = group.dataset.group;
+    const vals = [...group.querySelectorAll(".chip.selected[data-v]")].map((c) => c.dataset.v);
+    if (customInput && !customInput.hidden && customInput.value.trim()) vals.push(customInput.value.trim());
+    picks[key] = vals;
+    validate();
+  }
+
+  // 🎲 룰렛
+  function spin(group, customInput) {
+    if (group.dataset.spinning) return;
+    group.dataset.spinning = "1";
+    const chips = [...group.querySelectorAll(".chip[data-v]")];
+    group.querySelectorAll(".chip").forEach((c) => c.classList.remove("selected"));
+    if (customInput) customInput.hidden = true;
+    update(group, customInput);
+
+    const target = Math.floor(Math.random() * chips.length);
+    const total = chips.length * 2 + target;
+    let i = 0;
+    const tick = () => {
+      chips.forEach((c) => c.classList.remove("spin"));
+      if (i === total) {
+        chips[target].classList.add("selected");
+        delete group.dataset.spinning;
+        update(group, customInput);
+        burstAt(chips[target], 16);
+        toast(`🎲 ${chips[target].dataset.v} 당첨!`);
+        return;
+      }
+      chips[i % chips.length].classList.add("spin");
+      i++;
+      setTimeout(tick, 45 + Math.pow(i / total, 3) * 380);
+    };
+    tick();
+  }
+
+  const dateInput = $("dateInput");
+  const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  dateInput.min = iso(new Date());
+  dateInput.addEventListener("input", validate);
+
+  function validate() {
+    $("toFood").disabled = !(dateInput.value && picks.time.length);
+    $("toActivity").disabled = !picks.food.length;
+    $("toDress").disabled = !picks.activity.length;
+    $("toCoupon").disabled = !(picks.color.length && picks.style.length);
+  }
+
+  $("toFood").addEventListener("click", () => go("s-food"));
+  $("toActivity").addEventListener("click", () => go("s-activity"));
+  $("toDress").addEventListener("click", () => go("s-dress"));
+  $("toCoupon").addEventListener("click", () => go("s-coupon"));
+
+  // 긁는 쿠폰
+  const coupon = CONFIG.coupons[Math.floor(Math.random() * CONFIG.coupons.length)];
+  $("couponText").textContent = coupon;
+  let scratchDone = false, scratchReady = false;
+
+  function revealCoupon() {
+    if (scratchDone) return;
+    scratchDone = true;
+    const cv = $("scratchCanvas");
+    cv.style.transition = "opacity .5s";
+    cv.style.opacity = 0;
+    setTimeout(() => { cv.hidden = true; }, 500);
+    $("skipScratch").hidden = true;
+    burstAt($("couponText"), 30);
+    $("toTicket").disabled = false;
+  }
+  $("skipScratch").addEventListener("click", revealCoupon);
+
+  function initScratch() {
+    if (scratchReady) return;
+    scratchReady = true;
+    const cv = $("scratchCanvas");
+    const rect = cv.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = rect.width * dpr;
+    cv.height = rect.height * dpr;
+    const ctx = cv.getContext("2d");
+    ctx.scale(dpr, dpr);
+    const g = ctx.createLinearGradient(0, 0, rect.width, rect.height);
+    g.addColorStop(0, "#ffc2d1");
+    g.addColorStop(1, "#ff8fab");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.fillStyle = "rgba(255,255,255,.95)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "22px Jua, 'Apple SD Gothic Neo', sans-serif";
+    ctx.fillText("여기를 긁어봐! 💗", rect.width / 2, rect.height / 2);
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 38;
+
+    let drawing = false, last = null, moves = 0;
+    const pos = (e) => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+    const line = (a, b) => { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0] + 0.1, b[1]); ctx.stroke(); };
+    const check = () => {
+      const d = ctx.getImageData(0, 0, cv.width, cv.height).data;
+      let clear = 0, n = 0;
+      for (let i = 3; i < d.length; i += 4 * 24) { n++; if (d[i] === 0) clear++; }
+      if (clear / n > 0.45) revealCoupon();
+    };
+    cv.addEventListener("pointerdown", (e) => {
+      drawing = true; last = pos(e); line(last, last);
+      try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    cv.addEventListener("pointermove", (e) => {
+      if (!drawing || scratchDone) return;
+      const p = pos(e); line(last, p); last = p;
+      if (++moves % 6 === 0) check();
+    });
+    const stop = () => { if (drawing) { drawing = false; check(); } };
+    cv.addEventListener("pointerup", stop);
+    cv.addEventListener("pointercancel", stop);
+  }
+
+  // 티켓
+  function prettyDate(v) {
+    const d = new Date(v + "T00:00:00");
+    const days = ["일", "월", "화", "수", "목", "금", "토"];
+    return `${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+  }
+  function dday(v) {
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    const n = Math.round((new Date(v + "T00:00:00") - t) / 864e5);
+    return n === 0 ? "D-DAY" : `D-${n}`;
+  }
+  const colorName = () => picks.color[0];
+  const colorHex = () => document.querySelector(`[data-group="color"] .chip[data-v="${colorName()}"]`).dataset.hex;
+
+  $("toTicket").addEventListener("click", () => {
+    $("tTitle").textContent = `${CONFIG.to} ♥ ${CONFIG.from}`;
+    $("tDate").innerHTML = "";
+    $("tDate").append(prettyDate(dateInput.value));
+    const badge = document.createElement("span");
+    badge.className = "dday";
+    badge.textContent = dday(dateInput.value);
+    $("tDate").append(badge);
+    $("tTime").textContent = picks.time.join(", ");
+    $("tFood").textContent = picks.food.join(", ");
+    $("tAct").textContent = picks.activity.join(", ");
+    $("tDress").innerHTML = `<span class="dot" style="background:${colorHex()}"></span>`;
+    $("tDress").append(`${colorName()} · ${picks.style[0]}`);
+    $("tCoupon").textContent = coupon;
+    go("s-ticket");
+    burst(window.innerWidth / 2, window.innerHeight / 3, 46);
+    setTimeout(() => $("stamp").classList.add("on"), 700);
+  });
+
+  function summary() {
+    const note = $("noteInput").value.trim();
+    return [
+      `💌 ${CONFIG.fromNick}에게 보내는 답장`,
+      ``,
+      `데이트 신청 수락했어! 💖`,
+      `📅 ${prettyDate(dateInput.value)} · ${dday(dateInput.value)}`,
+      `⏰ ${picks.time.join(", ")}`,
+      `🍽️ ${picks.food.join(", ")}`,
+      `🎈 ${picks.activity.join(", ")}`,
+      `👗 드레스 코드: ${colorName()} · ${picks.style[0]}`,
+      `🎁 받은 쿠폰: ${coupon}`,
+      ...(note ? [``, `💬 ${note}`] : []),
+      ``,
+      `기대할게 😘`,
+    ].join("\n");
+  }
+
+  $("shareBtn").addEventListener("click", async () => {
+    const text = summary();
+    if (navigator.share) {
+      try { await navigator.share({ text }); return; } catch (_) { /* 취소되거나 막히면 복사로 */ }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast("복사됐어! 카톡에 붙여넣어 줘 💬");
+    } catch (_) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      toast(ok ? "복사됐어! 카톡에 붙여넣어 줘 💬" : "이 화면을 캡처해서 보내줘 📸");
+    }
+  });
+</script>
+</body>
+</html>
