@@ -474,19 +474,39 @@
       noBtn.textContent = "좋아 💖";
       noBtn.className = "btn btn-yes";
       noBtn.style.cssText = "";
+      yesBtn.after(noBtn);   // 다시 "좋아" 버튼 옆으로
       noBtn.removeEventListener("pointerenter", onHover);
       noBtn.removeEventListener("pointerdown", dodge);
       noBtn.addEventListener("click", sayYes);
       return;
     }
 
+    // 카드의 흐림 효과(backdrop-filter) 안에서는 fixed의 기준이 화면이 아니라 카드가 돼서
+    // 버튼이 화면 밖으로 튀어 나간다. 그래서 처음 도망칠 때 body로 꺼내서 화면 기준으로 움직인다.
+    if (noBtn.parentElement !== document.body) {
+      const start = noBtn.getBoundingClientRect();
+      document.body.appendChild(noBtn);
+      noBtn.style.position = "fixed";
+      noBtn.style.zIndex = 30;
+      noBtn.style.left = start.left + "px";
+      noBtn.style.top = start.top + "px";
+      noBtn.getBoundingClientRect();   // 시작 위치를 먼저 반영해야 이동이 애니메이션으로 보인다
+      noBtn.style.transition = "left .25s, top .25s";
+    }
+
     const r = noBtn.getBoundingClientRect();
     const pad = 16;
-    noBtn.style.position = "fixed";
-    noBtn.style.zIndex = 30;
-    noBtn.style.left = Math.max(pad, Math.random() * (window.innerWidth - r.width - pad)) + "px";
-    noBtn.style.top = Math.max(pad, Math.random() * (window.innerHeight - r.height - pad)) + "px";
-    noBtn.style.transition = "left .25s, top .25s";
+    const maxX = document.documentElement.clientWidth - r.width - pad;
+    const maxY = document.documentElement.clientHeight - r.height - pad;
+    // 커서 바로 옆으로 다시 떨어지지 않게, 지금 자리에서 충분히 먼 곳을 고른다
+    let x, y;
+    for (let i = 0; i < 12; i++) {
+      x = pad + Math.random() * Math.max(0, maxX - pad);
+      y = pad + Math.random() * Math.max(0, maxY - pad);
+      if (Math.hypot(x - r.left, y - r.top) > 150) break;
+    }
+    noBtn.style.left = x + "px";
+    noBtn.style.top = y + "px";
   }
   const onHover = (e) => { if (e.pointerType === "mouse") dodge(e); };
   noBtn.addEventListener("pointerenter", onHover);
